@@ -32,24 +32,16 @@ void DirichletProblem::BuildMatrix(){
 	}	
 }
 
-void DirichletProblem::BuildRHSDirectMethod(SpectralQuantity & SQ1, SpectralQuantity & SQ2) {
+void DirichletProblem::BuildRHSDirectMethod(SpectralQuantity & SQ) {
 	map < pair< int , int > , complex < double > > * Kmap ;
 	Kmap = BIOs->GetK() ;
 	int nModes = BIOs->GetNumberofModes() ;
 	for(int i =-nModes; i<=nModes; i++) {
-		f(i+nModes) = 0.5 * SQ1[i] ;
+		f(i+nModes) = 0.5 * SQ[i] ;
 		for(int j = -nModes; j<=nModes; j++) {
-			f(i+nModes) = f(i+nModes) + ((*Kmap)[make_pair(i,j)] * SQ2[j]) ;
+			f(i+nModes) = f(i+nModes) + ((*Kmap)[make_pair(i,j)] * SQ[j]) ;
 		}
 	}
-	/*
-	for(int i =-nModes; i<=nModes; i++) {
-		for(int j =-nModes; j<=nModes; j++) {
-			cout << (*Kmap)[make_pair(i,j)]  << "  ";
-		}
-		cout << "\n" ;
-	}
-	*/
 }
 
 void DirichletProblem::BuildRHSIndirectMethod(SpectralQuantity & SQ) {

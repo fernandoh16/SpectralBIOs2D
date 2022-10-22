@@ -65,8 +65,8 @@ ParametricBoundaryRepresentation * SpectralBIOs::GetPBR() {
 void SpectralBIOs::BuildSpectralBIOs() {
 	BuildSpectralV() ;
 	BuildSpectralK() ;
-	BuildSpectralKt() ;
-	BuildSpectralW() ;
+	//BuildSpectralKt() ;
+	//BuildSpectralW() ;
 	//BuildCrossInteraction() ;
 }
 
@@ -178,7 +178,6 @@ void SpectralBIOs::BuildSpectralV() {
 	//
   	if(CaseWaveNumber=="Helmholtz") {
 		OpV.WaveNumber = WaveNumber ;
-		
 		SampleBIO(GetM1,GetM2,&OpV);
  		fftw_execute(PlanSpectralBIOs) ;
 		AssembleBIO(&V);
@@ -219,11 +218,11 @@ struct OperatorK {
 		NtV = ParamBoundRep->NormOfTangentVector(y) ;
 		complex < double > Value ;
 		Value = complex< double >(0.0,0.25*WaveNumber*NtV)*boost::math::cyl_hankel_1(1,WaveNumber*length(P1,P2))*((P1-P2)&Normal)/(length(P1,P2));
-		return  Value - ComputeK1(x,y) ;
+		return  Value ;
 	}
 	//
 	complex < double > ComputeH2(double x) {
-		return complex < double > (0.0,0.0) ;
+		return ComputeK2(x);
 	}
 } ;
 
@@ -251,26 +250,41 @@ void SpectralBIOs::BuildSpectralK() {
 	// 
 	OperatorK OpK ;
 	OpK.ParamBoundRep = PBR ;
+	OpK.WaveNumber = WaveNumber ;
 	//
 	if(CaseWaveNumber=="Laplace") { 
-	  	//
 		SampleBIO(GetK1,GetK2,&OpK);
-		//
 	 	fftw_execute(PlanSpectralBIOs) ;
-	  	// 
 		AssembleBIO(&K);
 	}
 	//
 	if(CaseWaveNumber=="Helmholtz") { 	
-		//
-		OpK.WaveNumber = WaveNumber ;
-	  	//
 		SampleBIO(GetH1,GetH2,&OpK);
-		//
 	 	fftw_execute(PlanSpectralBIOs) ;
-	  	// 
 		AssembleBIO(&K);
 	}
+	// Sanity Test 
+	/*
+	int N_Quad = 1000;
+	int m = 10;
+	int n = 10;
+	complex < double > Value = complex < double > (0.0,0.0);
+	double N_Q1, N_Q2;
+	double dh = 1.0/ (double)(N_Quad);
+	for(int i = 0; i<N_Quad; i++) {	
+		N_Q1 = (double)(i)/(double)(N_Quad);
+		for(int j = 0; j<N_Quad; j++) {
+			N_Q2 = (double)(j)/(double)(N_Quad);
+			if(i!=j) {
+				Value = Value + pow(dh,2)*OpK.ComputeH1(N_Q1,N_Q2) * exp(complex < double > (0,2*M_PI*(double)(n)*N_Q1-2*M_PI*(double)(m)*N_Q2));
+			}
+			if(i==j){
+				Value = Value + pow(dh,2)*OpK.ComputeH2(N_Q1) * exp(complex < double > (0,2*M_PI*(double)(n)*N_Q1-2*M_PI*(double)(m)*N_Q2));
+			}
+		}
+	}
+	cout << Value << " " << K[make_pair(m,n)];
+	*/
 }
 
 // === Adjoint Double Layer K' ===

@@ -31,22 +31,29 @@ struct PlaneWave {
 	Point Direction ;
 	ParametricBoundaryRepresentation * PBR ;
 	Point P ;
-	complex<double> Wave(double t) {	
+	Point N ;
+	Point P_ext;
+	complex< double > GetDirichletTrace(double t) {	
 		PBR->GetBoundaryRepresentation(P,t) ;
-		return 1+0.5*sin(2.0*M_PI*t) + pow(0.5,4)*sin(3.0*2.0*M_PI*t) + pow(0.5,4)*cos(4.0*2.0*M_PI*t) ;
-		// return  -E * exp(complex<double>(0.0,WaveNumber*(Direction & P))) ;
-	}
+		//return -1.0/(2*M_PI)*log(length(P,P_ext));
+		return exp(complex<double>(0.0,WaveNumber*(Direction & P))) ;
+	} 
+	complex< double > GetNeumannTrace(double t) {	
+		PBR->GetBoundaryRepresentation(P,t) ;
+		PBR->GetNormalVector(N,t);
+		// return -1.0/(2*M_PI)*(N&(P-P_ext))/pow(length(P,P_ext),2.0);
+		return complex < double > (0.0,WaveNumber*(N & Direction))*exp(complex<double>(0.0,WaveNumber*(Direction & P))) ;
+	} 
 } ;
 
-complex<double> GetPlaneWave(double t, void * Input) {
+complex < double > GetDirichletTrace(double t, void * Input) {
 	PlaneWave * PW = (PlaneWave *) Input ;
-	return PW->Wave(t) ;
+	return PW->GetDirichletTrace(t) ;
 }
 
-complex<double> GetPlaneWaveNormalized(double t, void * Input) {
+complex < double > GetNeumannTrace(double t, void * Input) {
 	PlaneWave * PW = (PlaneWave *) Input ;
-	double Norm = (PW->PBR)->NormOfTangentVector(t) ;
-	return (PW->Wave(t)) * Norm ;
+	return PW->GetNeumannTrace(t) ;
 }
 
 using namespace boost::program_options ;
@@ -75,10 +82,10 @@ int main(int argc, char* argv[]) {
         ("NumberOfModes"      , value<int>(&NumberOfModes)->default_value(50)             , "Number Of Spectral Modes") 
         ("NumberOfPoints"     , value<int>(&NumberOfPoints)->default_value(24)            , "Number of Quad points for PBR") 
         ("NumberOfCycles"     , value<int>(&NumberOfCycles)->default_value(10)            , "Number of Quad cycles for PBR") 
-        ("Problem"            , value<string>(&Problem)->default_value("Helmholtz")       , "Problem (Laplace,Helmholtz)") 
-        ("WaveNumber"         , value<double>(&WaveNumber)->default_value(1.0)            , "Wave Number")
+        ("Problem"            , value<string>(&Problem)->default_value("Laplace")       , "Problem (Laplace,Helmholtz)") 
+        ("WaveNumber"         , value<double>(&WaveNumber)->default_value(0.0)            , "Wave Number")
         ("Magnitude"          , value<double>(&Magnitude)->default_value(1.0)             , "Magnitude of the Incident Field") 
-        ("nSamples"           , value<int>   (&nSamples)->default_value(350)              , "Number Of FFT Samples") 
+        ("nSamples"           , value<int>   (&nSamples)->default_value(150)              , "Number Of FFT Samples") 
         ("DirectionX"         , value<double>(&DirectionX)->default_value(1.0)            , "X-component of the incident field") 
         ("DirectionY"         , value<double>(&DirectionY)->default_value(0.0)            , "Y-component of the incident field")
         ("NControlPoints"     , value<int>    (&NumberOfControlPoints)->default_value(50) , "Number of Boundary Points") 
@@ -98,52 +105,50 @@ int main(int argc, char* argv[]) {
         cout << desc << std::endl;
         return 1;
     } 
-	// === Parametric Boundary Representation ===
+	// Parametric Boundary Representation
 	ParametricBoundaryRepresentation PBR(NumberOfParameters,R_Fourier,R_der_Fourier,R_sec_der_Fourier) ;
 	vector <double> y ;
 	y.assign(NumberOfParameters,0.5) ; 
 	PBR.SetParameters(y) ;
 	// Quadrature 
 	PBR.SetQuadrature(NumberOfPoints,NumberOfCycles) ;
-	// === Spectral BIOs ===
+	// Spectral BIOs 
 	SpectralBIOs S(NumberOfModes,&PBR,nSamples,Problem,WaveNumber) ;
 	S.BuildSpectralBIOs() ; 
-	// === Right Hand Side === 
+	//  Right Hand Side  
 	SpectralQuantity RHS1(NumberOfModes,nSamples) ;
 	SpectralQuantity RHS2(NumberOfModes,nSamples) ;
-	//
+	// Plane Wave
 	PlaneWave PW ;
 	PW.WaveNumber = WaveNumber ;
 	PW.E = Magnitude ;
 	PW.Direction = Point(DirectionX,DirectionY) ;
 	PW.PBR = &PBR ;
+	PW.P_ext = Point(1.5,0.0,0.0);
 	//
-	RHS1.ConvertToSpectral(GetPlaneWave,&PW) ;
-	RHS2.ConvertToSpectral(GetPlaneWaveNormalized,&PW) ;
-	// === Dirichlet Problem ===
+	RHS1.ConvertToSpectral(GetDirichletTrace,&PW) ;
+	RHS2.ConvertToSpectral(GetNeumannTrace,&PW) ;
+	// Dirichlet Problem
 	DirichletProblem DP(S) ;
 	DP.BuildMatrix() ;
-	DP.BuildRHSDirectMethod(RHS1,RHS2) ;
-	// DP.BuildRHSIndirectMethod() ;
+	DP.BuildRHSDirectMethod(RHS1) ;
 	DP.Solve() ;
-	// === Get Solution ===
+	// Get Solution
 	SpectralQuantity Solution(NumberOfModes) ;
 	DP.GetSolution(Solution) ;
-	// === Print Matrix ===
+	// Print Solution
 	ofstream print_output(PrintSolution) ;
 	assert(print_output.is_open()) ;
 	//
 	double EvalPoint ;
+	complex < double > Value_Exact;
 	for(int i = 0; i<NumberOfControlPoints; i++) {
 		EvalPoint = (double)(i)/(double)(NumberOfControlPoints) ;
 		print_output << EvalPoint << " " ;
-		/*
-		//print_output << (Solution(EvalPoint)).real() << " " ;
-		//print_output << (Solution(EvalPoint)).imag() << "\n" ;
-		*/
-		print_output << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint))).real() << "  " ;
-		print_output << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint))).imag() << "\n" ;
+		Value_Exact = GetNeumannTrace(EvalPoint,&PW);
+		print_output << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint)))<< " " << Value_Exact << "\n" ;
 	}
+	print_output.close();
 	return 0 ;
 }
 

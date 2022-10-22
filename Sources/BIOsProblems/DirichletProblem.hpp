@@ -27,7 +27,7 @@ private:
 public:
 	DirichletProblem(SpectralBIOs & BIOs_) ;
 	void BuildMatrix() ;
-	void BuildRHSDirectMethod(SpectralQuantity & SQ1, SpectralQuantity & SQ2) ;
+	void BuildRHSDirectMethod(SpectralQuantity & SQ) ;
 	void BuildRHSIndirectMethod(SpectralQuantity & SQ) ;
 	void Solve() ;
 	void GetSolution(SpectralQuantity & SQ) ;
