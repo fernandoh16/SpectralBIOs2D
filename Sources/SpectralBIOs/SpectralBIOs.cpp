@@ -199,7 +199,7 @@ struct OperatorK {
 		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
 		ParamBoundRep->GetNormalVector(Normal,y) ;
-		NtV = NormOfTangentVector(y) ;
+		NtV = ParamBoundRep->NormOfTangentVector(y) ;
 		return complex < double > (1.0/(2.0 * M_PI) * (((P1-P2) & Normal))/(pow(length(P1,P2),2.0))*NtV,0.0) ;
 	}
 	//
@@ -208,7 +208,7 @@ struct OperatorK {
 		ParamBoundRep->GetBoundaryRepresentationDerivative(P2, x) ;
 		ParamBoundRep->GetBoundaryRepresentationSecondDerivative(P3, x) ;
 		ParamBoundRep->GetNormalVector(Normal,x) ;
-		NtV = NormOfTangentVector(y) ;
+		NtV = ParamBoundRep->NormOfTangentVector(x) ;
 		return complex < double > (1.0/(4.0 * M_PI) * ((Normal & P3))/(pow(length(P2),2.0))*NtV,0.0);
 	}
 	// === Helmholtz == 
@@ -216,7 +216,7 @@ struct OperatorK {
 		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
 		ParamBoundRep->GetNormalVector(Normal,y) ;
-		NtV = NormOfTangentVector(y) ;
+		NtV = ParamBoundRep->NormOfTangentVector(y) ;
 		complex < double > Value ;
 		Value = complex< double >(0.0,0.25*WaveNumber*NtV)*boost::math::cyl_hankel_1(1,WaveNumber*length(P1,P2))*((P1-P2)&Normal)/(length(P1,P2));
 		return  Value - ComputeK1(x,y) ;
