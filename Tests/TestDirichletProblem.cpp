@@ -23,7 +23,6 @@ using namespace std ;
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-//
 // #include "BayesianInversion/InverseScatteringBI/PlaneWave.hpp"
 
 struct PlaneWave {
@@ -107,7 +106,7 @@ int main(int argc, char* argv[]) {
 	// Quadrature 
 	PBR.SetQuadrature(NumberOfPoints,NumberOfCycles) ;
 	// === Spectral BIOs ===
-	SpectralBIOs S(NumberOfModes,Problem,WaveNumber,&PBR,nSamples) ;
+	SpectralBIOs S(NumberOfModes,&PBR,nSamples,Problem,WaveNumber) ;
 	S.BuildSpectralBIOs() ; 
 	// === Right Hand Side === 
 	SpectralQuantity RHS1(NumberOfModes,nSamples) ;
