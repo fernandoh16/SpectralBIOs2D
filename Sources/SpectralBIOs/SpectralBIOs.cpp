@@ -208,7 +208,7 @@ struct OperatorK {
 		ParamBoundRep->GetBoundaryRepresentationDerivative(P2, x) ;
 		ParamBoundRep->GetBoundaryRepresentationSecondDerivative(P3, x) ;
 		ParamBoundRep->GetNormalVector(Normal,x) ;
-		NtV = ParamBoundRep->NormOfTangentVector(x) ;
+		NtV = ParamBoundRep->NormOfTangentVector(x ) ;
 		return complex < double > (1.0/(4.0 * M_PI) * ((Normal & P3))/(pow(length(P2),2.0))*NtV,0.0);
 	}
 	// === Helmholtz == 
