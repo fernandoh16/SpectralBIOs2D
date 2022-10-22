@@ -44,6 +44,12 @@ struct PlaneWave {
 		// return -1.0/(2*M_PI)*(N&(P-P_ext))/pow(length(P,P_ext),2.0);
 		return complex < double > (0.0,WaveNumber*(N & Direction))*exp(complex<double>(0.0,WaveNumber*(Direction & P))) ;
 	} 
+	complex< double > GetNeumannTraceScaled(double t) {	
+		PBR->GetBoundaryRepresentation(P,t) ;
+		PBR->GetNormalVector(N,t);
+		// return -1.0/(2*M_PI)*(N&(P-P_ext))/pow(length(P,P_ext),2.0);
+		return complex < double > (0.0,WaveNumber*(N & Direction))*exp(complex<double>(0.0,WaveNumber*(Direction & P)))*(PBR->NormOfTangentVector(t)) ;
+	} 
 } ;
 
 complex < double > GetDirichletTrace(double t, void * Input) {
@@ -54,6 +60,11 @@ complex < double > GetDirichletTrace(double t, void * Input) {
 complex < double > GetNeumannTrace(double t, void * Input) {
 	PlaneWave * PW = (PlaneWave *) Input ;
 	return PW->GetNeumannTrace(t) ;
+}
+
+complex < double > GetNeumannTraceScaled(double t, void * Input) {
+	PlaneWave * PW = (PlaneWave *) Input ;
+	return PW->GetNeumannTraceScaled(t) ;
 }
 
 using namespace boost::program_options ;
@@ -127,7 +138,7 @@ int main(int argc, char* argv[]) {
 	PW.P_ext = Point(1.5,0.0,0.0);
 	//
 	RHS1.ConvertToSpectral(GetDirichletTrace,&PW) ;
-	RHS2.ConvertToSpectral(GetNeumannTrace,&PW) ;
+	RHS2.ConvertToSpectral(GetNeumannTraceScaled,&PW) ;
 	// Dirichlet Problem
 	DirichletProblem DP(S) ;
 	DP.BuildMatrix() ;
@@ -142,11 +153,16 @@ int main(int argc, char* argv[]) {
 	//
 	double EvalPoint ;
 	complex < double > Value_Exact;
+	/*
 	for(int i = 0; i<NumberOfControlPoints; i++) {
 		EvalPoint = (double)(i)/(double)(NumberOfControlPoints) ;
 		print_output << EvalPoint << " " ;
 		Value_Exact = GetNeumannTrace(EvalPoint,&PW);
-		print_output << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint)))<< " " << Value_Exact << "\n" ;
+		// print_output << setprecision(10) << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint)))<< " " << Value_Exact << "\n" ;
+	}*/
+	for(int i = -NumberOfModes; i<=NumberOfModes; i++) {
+		print_output << setprecision(10) << Solution[i]<< " " << RHS2[i] << " " ;
+		print_output << setprecision(10) << abs(Solution[i]-RHS2[i]) << "\n" ;
 	}
 	print_output.close();
 	return 0 ;
