@@ -1,5 +1,5 @@
-#ifndef DIRICHLET_PROBLEM_HPP
-#define DIRICHLET_PROBLEM_HPP
+#ifndef TransmissionProblem_HPP
+#define TransmissionProblem_HPP
 
 #include <cmath>
 #include <string>
@@ -17,18 +17,17 @@ using namespace Eigen;
 
 using namespace std ;
 
-class DirichletProblem {
+class TransmissionProblem {
 private:
 	SpectralBIOs * BIOs ;
-	MatrixXcd V ;
-	VectorXcd f ;
-	VectorXcd x ;
+	MatrixXcd MTF ;
+	VectorXcd f   ;
+	VectorXcd x   ;
 	
 public:
-	DirichletProblem(SpectralBIOs & BIOs_) ;
+	TransmissionProblem(SpectralBIOs & BIOs_) ;
 	void BuildMatrix() ;
-	void BuildRHSDirectMethod(SpectralQuantity & SQ) ;
-	void BuildRHSIndirectMethod(SpectralQuantity & SQ) ;
+	void BuildRHS(SpectralQuantity & SQ1, SpectralQuantity & SQ1) ;
 	void Solve() ;
 	void GetSolution(SpectralQuantity & SQ) ;
 	

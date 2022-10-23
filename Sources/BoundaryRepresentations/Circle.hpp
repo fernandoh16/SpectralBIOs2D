@@ -3,7 +3,7 @@
 
 void R_Fourier(Point & P, double t, int Index) {
 	if(Index == 0) {
-		P[0] = 0.25 * cos(2.0 * M_PI * t) ;
+		P[0] = 0.5 * cos(2.0 * M_PI * t) ;
 		P[1] = 0.5 * sin(2.0 * M_PI * t) ;
 	}
 	else {
@@ -14,7 +14,7 @@ void R_Fourier(Point & P, double t, int Index) {
 
 void R_der_Fourier(Point & P, double t, int Index) {
 	if(Index == 0) {
-		P[0] =-0.25 * 2.0 * M_PI * sin(2.0 * M_PI * t) ;
+		P[0] =-0.5 * 2.0 * M_PI * sin(2.0 * M_PI * t) ;
 		P[1] = 0.5 * 2.0 * M_PI * cos(2.0 * M_PI * t) ;
 	}
 	else {
@@ -25,7 +25,7 @@ void R_der_Fourier(Point & P, double t, int Index) {
 
 void R_sec_der_Fourier(Point & P, double t, int Index) {
 	if(Index == 0) {
-		P[0] =-0.25 * pow(2.0 * M_PI,2.0) * cos(2.0 * M_PI * t) ;
+		P[0] =-0.5 * pow(2.0 * M_PI,2.0) * cos(2.0 * M_PI * t) ;
 		P[1] =-0.5 * pow(2.0 * M_PI,2.0) * sin(2.0 * M_PI * t) ;
 	}
 	else {

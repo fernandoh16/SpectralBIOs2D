@@ -15,7 +15,13 @@ using namespace std ;
 #include "BIOsProblems/DirichletProblem.hpp"
 
 // Boundary Representation
-// #include "BoundaryRepresentations/Boomerang.hpp"
+/*
+#include "BoundaryRepresentations/Boomerang.hpp"
+#include "BoundaryRepresentations/Kidney.hpp"
+#include "BoundaryRepresentations/Circle.hpp"
+#include "BoundaryRepresentations/Fourier.hpp"
+#include "BoundaryRepresentations/CCoeffAk.hpp" 
+*/
 #include "BoundaryRepresentations/Circle.hpp"
 
 #include <boost/algorithm/string.hpp>  // to_upper
@@ -85,11 +91,13 @@ int main(int argc, char* argv[]) {
 	int NumberOfControlPoints ;
 	//
 	string PrintSolution ;
+	double ZetaDecay ;
+	double Sigma ;
 	//
 	bool verbose ;  
     options_description desc("-- Test Dirichlet Problem --") ;
     desc.add_options()("help,h", "Show this help message")
-        ("NumberOfParameters" , value<int>(&NumberOfParameters)->default_value(1)       , "Number Of Parameters (integration Dimensions)") 
+        ("NumberOfParameters" , value<int>(&NumberOfParameters)->default_value(0)       , "Number Of Parameters (integration Dimensions)") 
         ("NumberOfModes"      , value<int>(&NumberOfModes)->default_value(50)             , "Number Of Spectral Modes") 
         ("NumberOfPoints"     , value<int>(&NumberOfPoints)->default_value(24)            , "Number of Quad points for PBR") 
         ("NumberOfCycles"     , value<int>(&NumberOfCycles)->default_value(10)            , "Number of Quad cycles for PBR") 
@@ -101,6 +109,8 @@ int main(int argc, char* argv[]) {
         ("DirectionY"         , value<double>(&DirectionY)->default_value(0.0)            , "Y-component of the incident field")
         ("NControlPoints"     , value<int>    (&NumberOfControlPoints)->default_value(50) , "Number of Boundary Points") 
         ("Solution"           , value<string>(&PrintSolution)->default_value("solution.txt")   , "Solution") 
+		("ZetaDecay"          , value<double>(&ZetaDecay)->default_value(2.0)                       , "Decay Fourier Series")
+		("Sigma"              , value<double>(&Sigma)->default_value(0.15)                          , "Sigma")
         ("verbose,v"          , value<bool>(&verbose)->default_value(false)->implicit_value(true)   , "Verbose output")
     ;
     variables_map vm;
@@ -116,6 +126,26 @@ int main(int argc, char* argv[]) {
         cout << desc << std::endl;
         return 1;
     } 
+	// Parametric Boundary Representation
+	/*
+	double Index ;
+	vector < double > Coeff_A ;
+	for(int i = 1; i<=NumberOfParameters; i++) {
+		if(i % 2 == 0) {
+			Index = (double)(i)/2.0 ;
+		}
+		else {
+			Index = (double)(i+1)/2.0 ;
+		}
+		Coeff_A.push_back(pow(Index,-ZetaDecay)) ;
+	}
+	ParametricBoundaryRepresentation PBR(NumberOfParameters,Coeff_A,Sigma) ;
+	PBR.SetParametricBoundaryRepresentation(CircleRep2,CircleRep2Der,CircleRep2SecDer) ;
+	PBR.SetParametricBoundaryRepresentationBasis(FourierPBR,FourierPBRDer,FourierPBRSecDer) ;
+	vector <double> y ;
+	y.assign(NumberOfParameters,0.5) ; 
+	PBR.SetParameters(y) ;
+	*/
 	// Parametric Boundary Representation
 	ParametricBoundaryRepresentation PBR(NumberOfParameters,R_Fourier,R_der_Fourier,R_sec_der_Fourier) ;
 	vector <double> y ;
@@ -153,18 +183,18 @@ int main(int argc, char* argv[]) {
 	//
 	double EvalPoint ;
 	complex < double > Value_Exact;
-	/*
 	for(int i = 0; i<NumberOfControlPoints; i++) {
 		EvalPoint = (double)(i)/(double)(NumberOfControlPoints) ;
 		print_output << EvalPoint << " " ;
 		Value_Exact = GetNeumannTrace(EvalPoint,&PW);
-		// print_output << setprecision(10) << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint)))<< " " << Value_Exact << "\n" ;
-	}*/
-	for(int i = -NumberOfModes; i<=NumberOfModes; i++) {
-		print_output << setprecision(10) << Solution[i]<< " " << RHS2[i] << " " ;
-		print_output << setprecision(10) << abs(Solution[i]-RHS2[i]) << "\n" ;
+		print_output << setprecision(10) << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint))).real()<< " " << Value_Exact.real() << "\n" ;
 	}
 	print_output.close();
+	double Error = 0;
+	for(int i = -NumberOfModes; i<=NumberOfModes; i++) {
+		Error = Error + norm(Solution[i]-RHS2[i]);
+	}
+	cout << sqrt(Error) << "\n";
 	return 0 ;
 }
 

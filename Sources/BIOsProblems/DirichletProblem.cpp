@@ -54,6 +54,7 @@ void DirichletProblem::BuildRHSIndirectMethod(SpectralQuantity & SQ) {
 void DirichletProblem::Solve() {
 	// x = V.partialPivLU.solve(f);
 	x = V.fullPivLu().solve(f);
+	cout << (V*x-f).norm() << "\n";
 }
 
 void DirichletProblem::GetSolution(SpectralQuantity & SQ) {	
