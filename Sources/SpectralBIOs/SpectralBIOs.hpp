@@ -65,6 +65,8 @@ public:
 	void AssembleBIO(map < pair< int , int > , complex < double > > * BIO_M) ;
 	void BuildSpectralV()      ;
 	void BuildSpectralK()      ;
+	void BuildSpectralV2()     ;
+	void BuildSpectralK2()     ;
 	void BuildSpectralKt()     ;
 	void BuildSpectralW()      ;
 	// Mass Matrix

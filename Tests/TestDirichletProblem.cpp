@@ -29,6 +29,9 @@ using namespace std ;
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "Halton/halton.hpp"
+#include "Halton/halton.cpp"
+
 // #include "BayesianInversion/InverseScatteringBI/PlaneWave.hpp"
 
 struct PlaneWave {
@@ -97,7 +100,7 @@ int main(int argc, char* argv[]) {
 	bool verbose ;  
     options_description desc("-- Test Dirichlet Problem --") ;
     desc.add_options()("help,h", "Show this help message")
-        ("NumberOfParameters" , value<int>(&NumberOfParameters)->default_value(0)       , "Number Of Parameters (integration Dimensions)") 
+        ("NumberOfParameters" , value<int>(&NumberOfParameters)->default_value(1)       , "Number Of Parameters (integration Dimensions)") 
         ("NumberOfModes"      , value<int>(&NumberOfModes)->default_value(50)             , "Number Of Spectral Modes") 
         ("NumberOfPoints"     , value<int>(&NumberOfPoints)->default_value(24)            , "Number of Quad points for PBR") 
         ("NumberOfCycles"     , value<int>(&NumberOfCycles)->default_value(10)            , "Number of Quad cycles for PBR") 
@@ -155,7 +158,12 @@ int main(int argc, char* argv[]) {
 	PBR.SetQuadrature(NumberOfPoints,NumberOfCycles) ;
 	// Spectral BIOs 
 	SpectralBIOs S(NumberOfModes,&PBR,nSamples,Problem,WaveNumber) ;
-	S.BuildSpectralBIOs() ; 
+	// S.BuildSpectralBIOs() ;
+	// S.BuildSpectralV();
+	// S.BuildSpectralV2();
+	//
+	S.BuildSpectralV2();
+	S.BuildSpectralK2();
 	//  Right Hand Side  
 	SpectralQuantity RHS1(NumberOfModes,nSamples) ;
 	SpectralQuantity RHS2(NumberOfModes,nSamples) ;
@@ -180,7 +188,7 @@ int main(int argc, char* argv[]) {
 	// Print Solution
 	ofstream print_output(PrintSolution) ;
 	assert(print_output.is_open()) ;
-	//
+	// Post-Processing
 	double EvalPoint ;
 	complex < double > Value_Exact;
 	for(int i = 0; i<NumberOfControlPoints; i++) {
@@ -194,7 +202,18 @@ int main(int argc, char* argv[]) {
 	for(int i = -NumberOfModes; i<=NumberOfModes; i++) {
 		Error = Error + norm(Solution[i]-RHS2[i]);
 	}
-	cout << sqrt(Error) << "\n";
+	/*
+	cout << "Error:" << sqrt(Error) << "\n";
+	// Halton Points
+	int n_points = 10;
+	int dim = 10;
+	double * I;
+	I = halton(10,dim);
+	for (int i=0; i<dim; i++) {
+		cout << I[i] << "\n";
+	}
+	cout << "Hola" << "\n";
+	*/
 	return 0 ;
 }
 

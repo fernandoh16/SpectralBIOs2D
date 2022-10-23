@@ -128,7 +128,7 @@ struct OperatorV {
 		ParamBoundRep->GetBoundaryRepresentationDerivative(P1,x) ;
 		return complex < double > (-1.0 / (4.0 * M_PI)*log(pow(length(P1)/(2.0 * M_PI),2.0)),0.0) ;
 	}
-	// === Helmholtz == 
+	// === Helmholtz ===
 	complex <double> ComputeM1(double x , double y) {
 		ParamBoundRep->GetBoundaryRepresentation(P1,x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2,y) ;
@@ -136,6 +136,21 @@ struct OperatorV {
 	}
 	complex <double> ComputeM2(double x) {
 		return complex<double>(0.0,0.25) - 1.0/(2.0 * M_PI) * (log(WaveNumber/2.0) + (boost::math::constants::euler<double>())) ;
+	}
+	// === Helmholtz New ===
+	complex < double > ComputeM1_1(double x, double y) {
+		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
+		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
+		return -1.0/(4.0*M_PI)*(boost::math::cyl_bessel_j(0,WaveNumber*length(P1,P2))-1.0);
+	}
+	complex < double > ComputeM1_2(double x, double y) {
+		return ComputeM1(x,y) - log(pow((2.0*sin(M_PI *(x-y))),2.0))*ComputeM1_1(x,y);
+	}
+	complex < double > ComputeM2_1(double x) {
+		return complex < double > (0.0,0.0);
+	}
+	complex < double > ComputeM2_2(double x) {
+		return ComputeM2(x);
 	}
 } ;
 
@@ -160,6 +175,7 @@ complex < double > GetM2(double x, void * Input) {
 }
 
 void SpectralBIOs::BuildSpectralV() {
+	V.clear();
 	// 
 	OperatorV OpV ;
 	OpV.ParamBoundRep = PBR ;
@@ -182,6 +198,79 @@ void SpectralBIOs::BuildSpectralV() {
  		fftw_execute(PlanSpectralBIOs) ;
 		AssembleBIO(&V);
   	}
+	cout << V[make_pair(0,0)] << "\n";
+}
+
+// === Helmholtz New ===
+complex < double > ComputeM1_1(double x, double y, void * Input) {
+	OperatorV * OV = (OperatorV *) Input ;
+	return OV->ComputeM1_1(x,y) ;
+}
+complex < double > ComputeM1_2(double x, double y, void * Input) {
+	OperatorV * OV = (OperatorV *) Input ;
+	return OV->ComputeM1_2(x,y) ;
+}
+complex < double > ComputeM2_1(double x, void * Input) {
+	OperatorV * OV = (OperatorV *) Input ;
+	return OV->ComputeM2_1(x) ;
+}
+complex < double > ComputeM2_2(double x, void * Input) {
+	OperatorV * OV = (OperatorV *) Input ;
+	return OV->ComputeM2_2(x) ;
+}
+
+double CoeffLog(int x) {
+	double v = 0;
+	if (x!=0) {
+		v = -1.0/abs((double)(x)); 
+	}
+	return v;
+}
+
+void SpectralBIOs::BuildSpectralV2() {
+	//
+	V.clear();
+	// 
+	OperatorV OpV ;
+	OpV.ParamBoundRep = PBR ;
+  	//
+	SampleBIO(GetG1,GetG2,&OpV);
+	//
+ 	fftw_execute(PlanSpectralBIOs) ;
+  	// 
+	AssembleBIO(&V);
+	//
+  	for(int i = -nModes; i<=nModes; i++) {
+  		if(i != 0) {
+  			V[make_pair(i,i)] = V[make_pair(i,i)] + 1.0 / (4.0 * M_PI * abs((double)(i))) ;
+  		}
+  	}
+	//
+	if(CaseWaveNumber=="Helmholtz") { 	
+		OpV.WaveNumber = WaveNumber ;
+		map < pair< int , int > , complex < double > > Aux;
+		SampleBIO(ComputeM1_1,ComputeM2_1,&OpV);
+		fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&Aux);
+		//
+		complex < double > Value = complex < double > (0.0,0.0);
+  		for(int i = -nModes; i<=nModes; i++) {
+  			for(int j = -nModes; j<=nModes; j++) {
+				Value = complex < double > (0.0,0.0);
+				for(int k = -nModes; k<=nModes; k++) {
+					//if (i-j-k<=nModes && i-j-k>=nModes){
+					Value = Value + CoeffLog(k+j) * Aux[make_pair(i-j-k,-k)] ;
+					//}
+				}
+				V[make_pair(i,j)] = V[make_pair(i,j)] + Value;
+  			}
+  		}
+		//
+		SampleBIO(ComputeM1_2,ComputeM2_2,&OpV);
+	 	fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&V);
+	}
+	cout << V[make_pair(0,0)] << "\n";
 }
 
 // === Double Layer Operator K ===
@@ -193,13 +282,16 @@ struct OperatorK {
 	Point P3 ;
 	Point Normal ;
 	double NtV = 0;
+	//
+	bool method;
 	// === Laplace ===
 	complex < double > ComputeK1(double x , double y) {
 		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
 		ParamBoundRep->GetNormalVector(Normal,y) ;
 		NtV = ParamBoundRep->NormOfTangentVector(y) ;
-		return complex < double > (1.0/(2.0 * M_PI) * (((P1-P2) & Normal))/(pow(length(P1,P2),2.0))*NtV,0.0) ;
+		//complex < double > Value = complex < double > (0.0,0.0);
+		return complex < double > (1.0/(2.0 * M_PI) * (((P1-P2) & Normal))/(pow(length(P1,P2),2.0))*NtV,0.0);
 	}
 	//
 	complex < double > ComputeK2(double x) {
@@ -210,47 +302,63 @@ struct OperatorK {
 		NtV = ParamBoundRep->NormOfTangentVector(x ) ;
 		return complex < double > (1.0/(4.0 * M_PI) * ((Normal & P3))/(pow(length(P2),2.0))*NtV,0.0);
 	}
-	// === Helmholtz == 
+	// === Helmholtz ===
 	complex< double > ComputeH1(double x, double y) {
 		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
 		ParamBoundRep->GetNormalVector(Normal,y) ;
 		NtV = ParamBoundRep->NormOfTangentVector(y) ;
-		complex < double > Value ;
-		Value = complex< double >(0.0,0.25*WaveNumber*NtV)*boost::math::cyl_hankel_1(1,WaveNumber*length(P1,P2))*((P1-P2)&Normal)/(length(P1,P2));
-		return  Value ;
+		return complex< double >(0.0,0.25*WaveNumber*NtV)*boost::math::cyl_hankel_1(1,WaveNumber*length(P1,P2))*((P1-P2)&Normal)/(length(P1,P2));
 	}
 	//
 	complex < double > ComputeH2(double x) {
 		return ComputeK2(x);
 	}
+	// === Helmholtz New ===
+	complex < double > ComputeH1_1(double x, double y) {
+		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
+		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
+		return -WaveNumber*length(P1,P2)*boost::math::cyl_bessel_j(1,WaveNumber*length(P1,P2))*ComputeK1(x,y);
+	}
+	complex < double > ComputeH1_2(double x, double y) {
+		return ComputeH1(x,y) - log(pow((2.0*sin(M_PI *(x-y))),2.0))*ComputeH1_1(x,y);
+	}
+	//
+	complex < double > ComputeH2_1(double x) {
+		return complex < double > (0.0,0.0);
+	}
+	complex < double > ComputeH2_2(double x) {
+		return ComputeH2(x);
+	}
 } ;
 
+// === Laplace ===
 complex < double > GetK1(double x, double y, void * Input) {
 	OperatorK * OK = (OperatorK *) Input ;
 	return OK->ComputeK1(x,y) ;
 }
-
 complex < double > GetK2(double x, void * Input) {
 	OperatorK * OK = (OperatorK *) Input ;
 	return OK->ComputeK2(x) ;
 }
-
+// === Helmholtz ===
 complex < double > GetH1(double x, double y, void * Input) {
 	OperatorK * OK = (OperatorK *) Input ;
 	return OK->ComputeH1(x,y) ;
 }
-
 complex < double > GetH2(double x, void * Input) {
 	OperatorK * OK = (OperatorK *) Input ;
 	return OK->ComputeH2(x) ;
 }
 
 void SpectralBIOs::BuildSpectralK() {
+	K.clear();
 	// 
 	OperatorK OpK ;
 	OpK.ParamBoundRep = PBR ;
 	OpK.WaveNumber = WaveNumber ;
+	//
+	map < pair< int , int > , complex < double > > Aux  ;
 	//
 	if(CaseWaveNumber=="Laplace") { 
 		SampleBIO(GetK1,GetK2,&OpK);
@@ -263,28 +371,63 @@ void SpectralBIOs::BuildSpectralK() {
 	 	fftw_execute(PlanSpectralBIOs) ;
 		AssembleBIO(&K);
 	}
-	// Sanity Test 
-	/*
-	int N_Quad = 1000;
-	int m = 10;
-	int n = 10;
-	complex < double > Value = complex < double > (0.0,0.0);
-	double N_Q1, N_Q2;
-	double dh = 1.0/ (double)(N_Quad);
-	for(int i = 0; i<N_Quad; i++) {	
-		N_Q1 = (double)(i)/(double)(N_Quad);
-		for(int j = 0; j<N_Quad; j++) {
-			N_Q2 = (double)(j)/(double)(N_Quad);
-			if(i!=j) {
-				Value = Value + pow(dh,2)*OpK.ComputeH1(N_Q1,N_Q2) * exp(complex < double > (0,2*M_PI*(double)(n)*N_Q1-2*M_PI*(double)(m)*N_Q2));
-			}
-			if(i==j){
-				Value = Value + pow(dh,2)*OpK.ComputeH2(N_Q1) * exp(complex < double > (0,2*M_PI*(double)(n)*N_Q1-2*M_PI*(double)(m)*N_Q2));
-			}
-		}
+	cout << setprecision(10) << K[make_pair(5,5)] << "\n";
+}
+
+// === Helmholtz New ===
+complex < double > ComputeH1_1(double x, double y, void * Input) {
+	OperatorK * OK = (OperatorK *) Input ;
+	return OK->ComputeH1_1(x,y) ;
+}
+complex < double > ComputeH1_2(double x, double y, void * Input) {
+	OperatorK * OK = (OperatorK *) Input ;
+	return OK->ComputeH1_2(x,y) ;
+}
+complex < double > ComputeH2_1(double x, void * Input) {
+	OperatorK * OK = (OperatorK *) Input ;
+	return OK->ComputeH2_1(x) ;
+}
+complex < double > ComputeH2_2(double x, void * Input) {
+	OperatorK * OK = (OperatorK *) Input ;
+	return OK->ComputeH2_2(x) ;
+}
+
+void SpectralBIOs::BuildSpectralK2() {
+	K.clear();
+	// 
+	OperatorK OpK ;
+	OpK.ParamBoundRep = PBR;
+	//
+	if(CaseWaveNumber=="Laplace") { 
+		SampleBIO(GetK1,GetK2,&OpK);
+		fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&K);
 	}
-	cout << Value << " " << K[make_pair(m,n)];
-	*/
+	//
+	if(CaseWaveNumber=="Helmholtz") { 	
+		OpK.WaveNumber = WaveNumber ;
+		//
+		map < pair< int , int > , complex < double > > Aux;
+		SampleBIO(ComputeH1_1,ComputeH2_1,&OpK);
+		fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&Aux);
+		//
+		complex < double > Value = complex < double > (0.0,0.0);
+  		for(int i = -nModes; i<=nModes; i++) {
+  			for(int j = -nModes; j<=nModes; j++) {
+				Value = complex < double > (0.0,0.0);
+				for(int k = -nModes; k<=nModes; k++) {
+					Value = Value + CoeffLog(k+j) * Aux[make_pair(i-j-k,-k)] ;
+				}
+				K[make_pair(i,j)] = Value;//K[make_pair(i,j)] + Value;
+  			}
+  		}
+		//
+		SampleBIO(ComputeH1_2,ComputeH2_2,&OpK);
+	 	fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&K);
+	}
+	cout << setprecision(10) << K[make_pair(5,5)] << "\n";
 }
 
 // === Adjoint Double Layer K' ===

@@ -10,6 +10,7 @@ set(SOURCE_FILES
     # ${CMAKE_CURRENT_LIST_DIR}/QoIBoundary/QoIBoundary.cpp
     # ${CMAKE_CURRENT_LIST_DIR}/QoISolution/QoISolution.cpp
     ${CMAKE_CURRENT_LIST_DIR}/BoundaryPotentials/BoundaryPotentials.cpp
+	#${CMAKE_CURRENT_LIST_DIR}/Halton/Halton.cpp
     PARENT_SCOPE
 )
 
@@ -31,5 +32,6 @@ set(HEADER_FILES
 	${CMAKE_CURRENT_LIST_DIR}/BayesianInversion/InverseScatteringBI/PlaneWave.hpp
 	${CMAKE_CURRENT_LIST_DIR}/BayesianInversion/InverseScatteringBI/Potential.hpp
 	${CMAKE_CURRENT_LIST_DIR}/BayesianInversion/InverseScatteringBI/QuantityOfInterest.hpp
+	#${CMAKE_CURRENT_LIST_DIR}/Halton/Halton.hpp
     PARENT_SCOPE
 )
