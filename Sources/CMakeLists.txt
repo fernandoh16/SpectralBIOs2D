@@ -7,6 +7,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/SpectralBIOs/SpectralBIOs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/SpectralQuantity/SpectralQuantity.cpp
     ${CMAKE_CURRENT_LIST_DIR}/BIOsProblems/DirichletProblem.cpp
+	${CMAKE_CURRENT_LIST_DIR}/BIOsProblems/NeumannProblem.cpp
     # ${CMAKE_CURRENT_LIST_DIR}/QoIBoundary/QoIBoundary.cpp
     # ${CMAKE_CURRENT_LIST_DIR}/QoISolution/QoISolution.cpp
     ${CMAKE_CURRENT_LIST_DIR}/BoundaryPotentials/BoundaryPotentials.cpp
@@ -24,6 +25,7 @@ set(HEADER_FILES
     ${CMAKE_CURRENT_LIST_DIR}/BoundaryRepresentations/Boomerang.hpp
     ${CMAKE_CURRENT_LIST_DIR}/SpectralQuantity/SpectralQuantity.hpp
     ${CMAKE_CURRENT_LIST_DIR}/BIOsProblems/DirichletProblem.hpp
+	${CMAKE_CURRENT_LIST_DIR}/BIOsProblems/NeumannProblem.hpp
     # ${CMAKE_CURRENT_LIST_DIR}/QoIBoundary/QoIBoundary.hpp
     # ${CMAKE_CURRENT_LIST_DIR}/QoISolution/QoISolution.hpp
     ${CMAKE_CURRENT_LIST_DIR}/BayesianInversion/BayesianInversion.hpp

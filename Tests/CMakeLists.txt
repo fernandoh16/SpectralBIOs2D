@@ -3,6 +3,7 @@ set(UQ_BIOs_Tests
     #TestBI_IPL_Serial
     #TestBIOperations
     TestDirichletProblem
+	TestNeumannProblem
     #TestForwardUQ_IPL
     #TestForwardUQ_Uniform
     #TestPBR

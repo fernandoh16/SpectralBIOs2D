@@ -181,9 +181,7 @@ void SpectralBIOs::BuildSpectralV() {
 	OpV.ParamBoundRep = PBR ;
   	//
 	SampleBIO(GetG1,GetG2,&OpV);
-	//
  	fftw_execute(PlanSpectralBIOs) ;
-  	// 
 	AssembleBIO(&V);
 	//
   	for(int i = -nModes; i<=nModes; i++) {
@@ -255,7 +253,7 @@ void SpectralBIOs::BuildSpectralV2() {
   		for(int i = -nModes; i<=nModes; i++) {
   			for(int j = -nModes; j<=nModes; j++) {
 				Value = complex < double > (0.0,0.0);
-				for(int k = -nModes; k<=nModes; k++) {
+				for(int k = -Samples; k<=Samples; k++) {
 					//if (i-j-k<=nModes && i-j-k>=nModes){
 					Value = Value + CoeffLog(k+j) * Aux[make_pair(i-j-k,-k)] ;
 					//}
@@ -316,7 +314,7 @@ struct OperatorK {
 	complex < double > ComputeH1_1(double x, double y) {
 		ParamBoundRep->GetBoundaryRepresentation(P1, x) ;
 		ParamBoundRep->GetBoundaryRepresentation(P2, y) ;
-		return -WaveNumber*length(P1,P2)*boost::math::cyl_bessel_j(1,WaveNumber*length(P1,P2))*ComputeK1(x,y);
+		return -0.5*WaveNumber*length(P1,P2)*boost::math::cyl_bessel_j(1,WaveNumber*length(P1,P2))*ComputeK1(x,y);
 	}
 	complex < double > ComputeH1_2(double x, double y) {
 		return ComputeH1(x,y) - log(pow((2.0*sin(M_PI *(x-y))),2.0))*ComputeH1_1(x,y);
@@ -369,7 +367,6 @@ void SpectralBIOs::BuildSpectralK() {
 	 	fftw_execute(PlanSpectralBIOs) ;
 		AssembleBIO(&K);
 	}
-	cout << setprecision(10) << K[make_pair(5,5)] << "\n";
 }
 
 // === Helmholtz New ===
@@ -414,7 +411,7 @@ void SpectralBIOs::BuildSpectralK2() {
   		for(int i = -nModes; i<=nModes; i++) {
   			for(int j = -nModes; j<=nModes; j++) {
 				Value = complex < double > (0.0,0.0);
-				for(int k = -nModes; k<=nModes; k++) {
+				for(int k = -Samples; k<=Samples; k++) {
 					Value = Value + CoeffLog(k+j) * Aux[make_pair(i-j-k,-k)] ;
 				}
 				K[make_pair(i,j)] = Value;//K[make_pair(i,j)] + Value;
@@ -425,7 +422,7 @@ void SpectralBIOs::BuildSpectralK2() {
 	 	fftw_execute(PlanSpectralBIOs) ;
 		AssembleBIO(&K);
 	}
-	cout << setprecision(10) << K[make_pair(5,5)] << "\n";
+	// cout << setprecision(10) << K[make_pair(5,5)] << "\n";
 }
 
 // === Adjoint Double Layer K' ===
@@ -464,6 +461,7 @@ complex < double > GetNu2(double t, void * Input) {
 
 // === Hypersingular Operator W ===
 void SpectralBIOs::BuildSpectralW() {
+	W.clear();
 	if(CaseWaveNumber=="Laplace") {
 		// First Contribution
   		for(int i = -nModes; i<=nModes; i++) {
@@ -471,6 +469,7 @@ void SpectralBIOs::BuildSpectralW() {
   				W[make_pair(i,j)] = pow(2.0 * M_PI, 2.0) * (double)(i) * (double)(j) * V[make_pair(i,j)] ;
   				}
   		}
+		cout << setprecision(10) << W[make_pair(1,1)] << "\n";
 	}
 	//
 	if(CaseWaveNumber=="Helmholtz") {
@@ -501,86 +500,95 @@ void SpectralBIOs::BuildSpectralW() {
 				W[make_pair(i,j)] = W[make_pair(i,j)] + pow(WaveNumber,2.0)*Value;
   			}
   		}
+		cout << setprecision(10) << W[make_pair(-1,-1)] << "\n";
 	}
+	cout << setprecision(10) << W[make_pair(-1,-1)] << "\n";
 }
 
-// W+Laplace 
+// Log
 complex < double > ComputeW1_1(double x, double y, void * Input) {
 	OperatorV * OV = (OperatorV *) Input ;
 	Point N1;
 	Point N2;
 	OV->ParamBoundRep->GetNormalVector(N1,x) ;
 	OV->ParamBoundRep->GetNormalVector(N2,y) ;
-	return (N1&N2)*(OV->ComputeG1(x,y)) ;
+	return (N1&N2)*(-1.0/(4.0*M_PI) + (OV->ComputeM1_1(x,y))) ;
 }
 complex < double > ComputeW1_2(double x, void * Input) {
-	OperatorK * OV = (OperatorV *) Input ;
+	OperatorV * OV = (OperatorV *) Input ;
 	Point N;
 	OV->ParamBoundRep->GetNormalVector(N,x) ;
-	return (N&N)*(OV->ComputeG2(x)) ;
+	return   (N&N)*(-1.0/(4.0*M_PI) + (OV->ComputeM2_1(x))) ;
 }
-// W+Helmholtz
+// Smooth
 complex < double > ComputeW2_1(double x, double y, void * Input) {
 	OperatorV * OV = (OperatorV *) Input ;
 	Point N1;
 	Point N2;
-	ParamBoundRep->GetNormalVector(N1,x) ;
-	ParamBoundRep->GetNormalVector(N2,y) ;
-	return (N1&N2)*(OV->ComputeG1(x,y)) ;
+	OV->ParamBoundRep->GetNormalVector(N1,x) ;
+	OV->ParamBoundRep->GetNormalVector(N2,y) ;
+	return (N1&N2)*((OV->ComputeM1_2(x,y)) + (OV->ComputeG1(x,y))) ;
 }
 complex < double > ComputeW2_2(double x, void * Input) {
-	OperatorK * OK = (OperatorK *) Input ;
-	return OK->ComputeH2_2(x) ;
+	OperatorV * OV = (OperatorV *) Input ;
+	Point N;
+	OV->ParamBoundRep->GetNormalVector(N,x) ;
+	return   (N&N)*((OV->ComputeM2_2(x))   + (OV->ComputeG2(x ))) ;
 }
-/*
+
 // === Hypersingular Operator W ===
 void SpectralBIOs::BuildSpectralW2() {
+	W.clear();
 	if(CaseWaveNumber=="Laplace") {
 		// First Contribution
   		for(int i = -nModes; i<=nModes; i++) {
   			for(int j = -nModes; j<=nModes; j++) {
   				W[make_pair(i,j)] = pow(2.0 * M_PI, 2.0) * (double)(i) * (double)(j) * V[make_pair(i,j)] ;
-  				}
+  			}
   		}
 	}
 	//
 	if(CaseWaveNumber=="Helmholtz") {
 		// First Contribution
+		/*
   		for(int i = -nModes; i<=nModes; i++) {
   			for(int j = -nModes; j<=nModes; j++) {
   				W[make_pair(i,j)] = pow(2.0 * M_PI, 2.0) * (double)(i) * (double)(j) * V[make_pair(i,j)] ;
   			}
   		}
-		// Second Contribution: Nu1 & (V^0) & Nu2
+		*/
+		// Second Contribution: 
 		OperatorV OpV ;
 		OpV.ParamBoundRep = PBR ;
 		OpV.WaveNumber = WaveNumber ;
 		//
-		map < pair< int , int > , complex < double > > Aux;
+		map < pair< int , int > , complex < double > > Aux1;
+		map < pair< int , int > , complex < double > > Aux2;
+		// Log
 		SampleBIO(ComputeW1_1,ComputeW1_2,&OpV);
 		fftw_execute(PlanSpectralBIOs) ;
-		AssembleBIO(&Aux);
+		AssembleBIO(&Aux1);
+		// Smooth
+		SampleBIO(ComputeW2_1,ComputeW2_2,&OpV);
+	 	fftw_execute(PlanSpectralBIOs) ;
+		AssembleBIO(&Aux2);
 		//
 		complex < double > Value = complex < double > (0.0,0.0);
+		//
   		for(int i = -nModes; i<=nModes; i++) {
   			for(int j = -nModes; j<=nModes; j++) {
 				Value = complex < double > (0.0,0.0);
 				for(int k = -nModes; k<=nModes; k++) {
-					//if (i-j-k<=nModes && i-j-k>=nModes){
-					Value = Value + CoeffLog(k+j) * Aux[make_pair(i-j-k,-k)] ;
-					//}
+					if (i-j-k<=nModes && i-j-k>=nModes){
+						Value = Value + CoeffLog(k+j) * Aux1[make_pair(i-j-k,-k)] ;
+					}
 				}
-				W[make_pair(i,j)] = W[make_pair(i,j)] + pow(WaveNumber,2.0)*Value;
+				W[make_pair(i,j)] = -pow(2.0 * M_PI, 2.0) * (double)(i) * (double)(j) * V[make_pair(i,j)] + pow(WaveNumber,2.0)*(Value+Aux2[make_pair(i,j)]);
   			}
   		}
-		//
-		SampleBIO(ComputeM1_2,ComputeM2_2,&OpV);
-	 	fftw_execute(PlanSpectralBIOs) ;
-		AssembleBIO(&V);
-		// Second Contribution: Nu1 & (V^k-V0) & Nu2
 	}
+	cout << setprecision(10) << W[make_pair(-1,-1)] << "\n";
 }
-*/
 // === Mass Matrix === Just the Identity!
 void SpectralBIOs::BuildMassMatrix() {
 	for(int i = -nModes; i<=nModes; i++) {

@@ -12,7 +12,7 @@ using namespace std ;
 #include "SpectralBIOs/SpectralBIOs.hpp"
 #include "SpectralQuantity/SpectralQuantity.hpp"
 #include "ParametricBoundaryRepresentation/ParametricBoundaryRepresentation.hpp"
-#include "BIOsProblems/DirichletProblem.hpp"
+#include "BIOsProblems/NeumannProblem.hpp"
 
 // Boundary Representation
 /*
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
 	y.assign(NumberOfParameters,0.5) ; 
 	PBR.SetParameters(y) ;
 	*/
-	// PBR
+	// Parametric Boundary Representation
 	ParametricBoundaryRepresentation PBR(NumberOfParameters,R_Fourier,R_der_Fourier,R_sec_der_Fourier) ;
 	vector <double> y ;
 	y.assign(NumberOfParameters,0.5) ; 
@@ -159,12 +159,14 @@ int main(int argc, char* argv[]) {
 	// Spectral BIOs 
 	SpectralBIOs S(NumberOfModes,&PBR,nSamples,Problem,WaveNumber) ;
 	// S.BuildSpectralBIOs() ;
-	// S.BuildSpectralV();
-	// S.BuildSpectralV2();
 	//
 	S.BuildSpectralV2();
 	S.BuildSpectralK2();
-	//  Right Hand Side  
+	//
+	S.BuildSpectralW2();
+	//S.BuildSpectralW2();
+	S.BuildSpectralKt();
+	//  Right Hand Side and Solution  
 	SpectralQuantity RHS1(NumberOfModes,nSamples) ;
 	SpectralQuantity RHS2(NumberOfModes,nSamples) ;
 	// Plane Wave
@@ -177,14 +179,14 @@ int main(int argc, char* argv[]) {
 	//
 	RHS1.ConvertToSpectral(GetDirichletTrace,&PW) ;
 	RHS2.ConvertToSpectral(GetNeumannTraceScaled,&PW) ;
-	// Dirichlet Problem
-	DirichletProblem DP(S) ;
-	DP.BuildMatrix() ;
-	DP.BuildRHSDirectMethod(RHS1) ;
-	DP.Solve() ;
+	// Neumann Problem
+	NeumannProblem NP(S) ;
+	NP.BuildMatrix() ;
+	NP.BuildRHSDirectMethod(RHS2) ;
+	NP.Solve() ;
 	// Get Solution
 	SpectralQuantity Solution(NumberOfModes) ;
-	DP.GetSolution(Solution) ;
+	NP.GetSolution(Solution) ;
 	// Print Solution
 	ofstream print_output(PrintSolution) ;
 	assert(print_output.is_open()) ;
@@ -194,15 +196,15 @@ int main(int argc, char* argv[]) {
 	for(int i = 0; i<NumberOfControlPoints; i++) {
 		EvalPoint = (double)(i)/(double)(NumberOfControlPoints) ;
 		print_output << EvalPoint << " " ;
-		Value_Exact = GetNeumannTrace(EvalPoint,&PW);
-		print_output << setprecision(10) << (Solution.GetScaled(EvalPoint,PBR.NormOfTangentVector(EvalPoint))).real()<< " " << Value_Exact.real() << "\n" ;
+		Value_Exact = GetDirichletTrace(EvalPoint,&PW);
+		print_output << setprecision(10) << (Solution.GetScaled(EvalPoint,1)).real()<< " " << Value_Exact.real() << "\n" ;
 	}
 	print_output.close();
 	double Error = 0;
 	for(int i = -NumberOfModes; i<=NumberOfModes; i++) {
-		Error = Error + norm(Solution[i]-RHS2[i]);
+		Error = Error + norm(Solution[i]-RHS1[i]);
 	}
-	cout << setprecision(10) << "Error:" << sqrt(Error) << "\n";
+	cout << "Error:" << sqrt(Error) << "\n";
 	/*
 	// Halton Points
 	int n_points = 10;

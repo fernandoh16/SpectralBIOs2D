@@ -69,6 +69,7 @@ public:
 	void BuildSpectralK2()     ;
 	void BuildSpectralKt()     ;
 	void BuildSpectralW()      ;
+	void BuildSpectralW2()     ;
 	// Mass Matrix
 	void BuildMassMatrix()     ;
 	// Cross Interactions
